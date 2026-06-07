@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Flashcards Littéraires</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #fafafa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    width: 100%;
+    background: #fff;
+    border-bottom: 2px solid #eee;
+    padding: 16px 20px;
+    text-align: center;
+  }
+  header h1 { font-size: 1.3rem; color: #222; }
+  header p  { font-size: 0.82rem; color: #888; margin-top: 3px; }
+
+  /* Upload */
+  #upload-section {
+    margin: 48px 16px;
+    max-width: 420px;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 36px 28px;
+    text-align: center;
+  }
+  #upload-section h2 { font-size: 1.1rem; color: #222; margin-bottom: 8px; }
+  #upload-section p  { font-size: 0.85rem; color: #777; margin-bottom: 24px; line-height: 1.5; }
+  #file-input { display: none; }
+
+  /* Buttons */
+  .btn {
+    display: inline-block;
+    padding: 13px 30px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: bold;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  .btn-green  { background: #3a9e00; color: #fff; }
+  .btn-orange { background: #ff8000; color: #fff; }
+  .btn-grey   { background: #eeeeee; color: #555; }
+  .btn:active { opacity: 0.85; }
+
+  /* Game */
+  #game-section { display: none; width: 100%; max-width: 480px; padding: 20px 16px; }
+
+  /* Progress */
+  #progress-wrap { margin-bottom: 20px; }
+  #progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.82rem; color: #555; margin-bottom: 6px;
+  }
+  #progress-bar-bg {
+    height: 10px; background: #e0e0e0; border-radius: 10px; overflow: hidden;
+  }
+  #progress-bar {
+    height: 100%; background: #2e7d32;
+    border-radius: 10px; transition: width 0.4s ease;
+  }
+
+  /* Card flip */
+  .scene { width: 100%; height: 300px; perspective: 900px; cursor: pointer; margin-bottom: 8px; }
+  .card {
+    width: 100%; height: 100%; position: relative;
+    transform-style: preserve-3d; transition: transform 0.55s ease;
+    border-radius: 14px;
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .face {
+    position: absolute; width: 100%; height: 100%;
+    backface-visibility: hidden; border-radius: 14px;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 24px 20px; text-align: center;
+    background: #fff; border: 1px solid #ddd;
+  }
+  .back { transform: rotateY(180deg); }
+
+  .face .label { font-size: 0.72rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .face .citation { font-style: italic; font-size: 1rem; color: #333; line-height: 1.7; margin-bottom: 14px; }
+  .face .meta { font-size: 0.78rem; color: #888; }
+  .face .word { font-size: 1.7rem; font-weight: bold; color: #000; margin-bottom: 12px; letter-spacing: 0.5px; }
+  .face .definition { font-size: 0.9rem; color: #444; line-height: 1.6; }
+  .face .category {
+    margin-top: 12px; font-size: 0.72rem;
+    background: #f5f5f5; color: #666;
+    padding: 3px 12px; border-radius: 20px; border: 1px solid #ddd;
+  }
+
+  .flip-hint { font-size: 0.78rem; color: #bbb; text-align: center; margin-bottom: 14px; }
+
+  .btn-row { display: flex; gap: 12px; }
+  .btn-row .btn { margin-bottom: 0; }
+
+  .btn-row-center { display: flex; justify-content: center; margin-top: 12px; }
+  .btn-small { padding: 10px 24px; font-size: 0.85rem; width: auto; }
+
+  #card-counter { text-align: center; color: #aaa; font-size: 0.78rem; margin-top: 12px; }
+
+  /* Celebration */
+  #celebration {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; padding: 48px 20px; text-align: center;
+  }
+  #celebration h2 { font-size: 2rem; color: #222; margin: 20px 0 8px; }
+  #celebration p  { font-size: 1rem; color: #555; }
+
+  /* Cake */
+  #cake-wrap svg { width: 200px; height: 200px; }
+  .flame {
+    transform-origin: center bottom;
+    animation: flicker 0.6s ease-in-out infinite alternate;
+  }
+  .flame:nth-child(2) { animation-delay: 0.2s; }
+  .flame:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes flicker {
+    0%   { transform: scaleY(1) rotate(-2deg); }
+    100% { transform: scaleY(1.2) rotate(2deg); }
+  }
+
+  #confetti-canvas { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999; }
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+
+<header>
+  <h1>Flashcards Littéraires</h1>
+  <p>Mémorise tes mots — un à la fois</p>
+</header>
+
+<!-- Upload -->
+<div id="upload-section">
+  <h2>Importe ton fichier Excel</h2>
+  <p>Colonnes attendues :<br><strong>Word · Definition · Sentence · Poem · Category · Author · Date</strong></p>
+  <input type="file" id="file-input" accept=".xlsx,.xls,.csv"/>
+  <label for="file-input" class="btn btn-green">Choisir un fichier</label>
+  <button class="btn btn-orange" id="demo-btn">Essayer avec des exemples</button>
+</div>
+
+<!-- Game -->
+<div id="game-section">
+  <div id="progress-wrap">
+    <div id="progress-label">
+      <span id="known-count">0 sus</span>
+      <span id="left-count">0 restants</span>
+    </div>
+    <div id="progress-bar-bg"><div id="progress-bar" style="width:0%"></div></div>
+  </div>
+
+  <div class="flip-hint">Clique pour retourner la carte</div>
+
+  <div class="scene" onclick="flipCard()">
+    <div class="card" id="card">
+      <div class="face front">
+        <div class="label">Citation</div>
+        <div class="citation" id="f-sentence"></div>
+        <div class="meta" id="f-meta"></div>
+      </div>
+      <div class="face back">
+        <div class="label">Mot &amp; Définition</div>
+        <div class="word" id="b-word"></div>
+        <div class="definition" id="b-def"></div>
+        <div class="category" id="b-cat"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-orange" onclick="markCard(false)">À revoir</button>
+    <button class="btn btn-green"  onclick="markCard(true)">Je sais !</button>
+  </div>
+  <div class="btn-row-center">
+    <button class="btn btn-grey btn-small" onclick="restartGame()">Recommencer</button>
+  </div>
+  <div id="card-counter"></div>
+</div>
+
+<!-- Celebration -->
+<div id="celebration">
+  <div id="cake-wrap">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="176" rx="82" ry="11" fill="#c8b88a"/>
+      <!-- Bottom tier -->
+      <rect x="28" y="128" width="144" height="50" rx="10" fill="#5c3317"/>
+      <path d="M38,128 Q50,112 62,128 Q74,112 86,128 Q98,112 110,128 Q122,112 134,128 Q146,112 158,128 Q164,118 170,128" fill="none" stroke="#3b1f08" stroke-width="6" stroke-linecap="round"/>
+      <rect x="28" y="120" width="144" height="12" rx="6" fill="#2e7d32"/>
+      <!-- Middle tier -->
+      <rect x="52" y="76" width="96" height="48" rx="9" fill="#6d3a1f"/>
+      <path d="M60,76 Q70,62 80,76 Q90,62 100,76 Q110,62 120,76 Q130,62 138,76" fill="none" stroke="#3b1f08" stroke-width="5" stroke-linecap="round"/>
+      <rect x="52" y="68" width="96" height="12" rx="6" fill="#e65100"/>
+      <!-- Candles -->
+      <rect x="78"  y="32" width="9" height="26" rx="4" fill="#e65100"/>
+      <rect x="96"  y="26" width="9" height="32" rx="4" fill="#2e7d32"/>
+      <rect x="114" y="32" width="9" height="26" rx="4" fill="#e65100"/>
+      <!-- Flames -->
+      <ellipse class="flame" cx="82"  cy="29" rx="4" ry="7" fill="#FFD700"/>
+      <ellipse class="flame" cx="100" cy="23" rx="4" ry="7" fill="#FFD700"/>
+      <ellipse class="flame" cx="118" cy="29" rx="4" ry="7" fill="#FFD700"/>
+      <!-- Dots -->
+      <circle cx="50"  cy="152" r="5" fill="#e65100"/>
+      <circle cx="70"  cy="146" r="5" fill="#2e7d32"/>
+      <circle cx="90"  cy="152" r="5" fill="#e65100"/>
+      <circle cx="110" cy="146" r="5" fill="#2e7d32"/>
+      <circle cx="130" cy="152" r="5" fill="#e65100"/>
+      <circle cx="150" cy="146" r="5" fill="#2e7d32"/>
+    </svg>
+  </div>
+  <h2>Bravo Katia !</h2>
+  <p>Tu as maîtrisé tous les mots !</p>
+  <div class="btn-row-center" style="margin-top:24px;">
+    <button class="btn btn-grey btn-small" onclick="restartGame()">Recommencer</button>
+  </div>
+</div>
+
+<script>
+let deck = [], known = [], total = 0, flipped = false;
+
+const DEMO = [
+  { word:"Lésine", definition:"Attitude d'avarice sordide, refus de dépenser même le nécessaire, souvent associée à une bassesse morale.", sentence:"« La sottise, l'erreur, le péché, la lésine »", poem:"Au Lecteur", category:"Mal", author:"Charles Baudelaire", date:"1861" },
+  { word:"Spleen", definition:"Mélancolie profonde, sentiment d'ennui et d'écœurement face à la vie.", sentence:"« J'ai plus de souvenirs que si j'avais mille ans »", poem:"Spleen", category:"Mal", author:"Charles Baudelaire", date:"1857" },
+  { word:"Gouffre", definition:"Abîme, profondeur immense, souvent métaphorique.", sentence:"« Je suis hanté. Le Ciel ! le Ciel ! — l'Abîme obscur »", poem:"Le Gouffre", category:"Angoisse", author:"Charles Baudelaire", date:"1868" },
+  { word:"Ennui", definition:"Sentiment de vide et de lassitude profonde, propre à l'âme baudelairienne.", sentence:"« L'Ennui, fruit de la morne incuriosité »", poem:"Au Lecteur", category:"Mal", author:"Charles Baudelaire", date:"1861" },
+  { word:"Idéal", definition:"Aspiration vers une perfection inaccessible, beauté absolue.", sentence:"« Je suis belle, ô mortels ! comme un rêve de pierre »", poem:"La Beauté", category:"Idéal", author:"Charles Baudelaire", date:"1857" },
+];
+
+document.getElementById('demo-btn').onclick = () => startGame(DEMO);
+
+document.getElementById('file-input').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const wb = XLSX.read(ev.target.result, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+    const cards = rows.map(r => ({
+      word:       r['Word']       || r['word']       || '',
+      definition: r['Definition'] || r['definition'] || '',
+      sentence:   r['Sentence']   || r['sentence']   || '',
+      poem:       r['Poem']       || r['poem']       || '',
+      category:   r['Category']   || r['category']   || '',
+      author:     r['Author']     || r['author']     || '',
+      date:       r['Date']       || r['date']       || '',
+    })).filter(c => c.word);
+    if (!cards.length) { alert("Aucune carte trouvée. Vérifie les noms de colonnes."); return; }
+    startGame(cards);
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+function shuffle(a) {
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.random()*(i+1)|0;
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function startGame(cards) {
+  deck = shuffle([...cards]);
+  known = [];
+  total = deck.length;
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('celebration').style.display = 'none';
+  document.getElementById('game-section').style.display = 'block';
+  showCard();
+}
+
+function showCard() {
+  if (!deck.length) { showCelebration(); return; }
+  flipped = false;
+  document.getElementById('card').classList.remove('flipped');
+  const c = deck[0];
+  const sentence = c.sentence || '—';
+  const word = c.word;
+  const re = new RegExp(`(${word})`, 'gi');
+  document.getElementById('f-sentence').innerHTML = sentence.replace(re, '<strong>$1</strong>');
+  document.getElementById('f-meta').textContent = [c.poem, c.author, c.date].filter(Boolean).join(' · ');
+  document.getElementById('b-word').textContent = c.word;
+  document.getElementById('b-def').textContent = c.definition;
+  document.getElementById('b-cat').textContent = c.category || '';
+  updateProgress();
+}
+
+function flipCard() {
+  flipped = !flipped;
+  document.getElementById('card').classList.toggle('flipped', flipped);
+}
+
+function markCard(know) {
+  if (!flipped) { flipCard(); return; }
+  if (know) known.push(deck.shift());
+  else { const c = deck.shift(); deck.push(c); }
+  showCard();
+}
+
+function updateProgress() {
+  const left = deck.length, k = known.length;
+  document.getElementById('progress-bar').style.width = (total ? k/total*100 : 0) + '%';
+  document.getElementById('known-count').textContent = k + ' sus';
+  document.getElementById('left-count').textContent = left + ' restant' + (left>1?'s':'');
+  document.getElementById('card-counter').textContent = 'Carte ' + (k+1) + ' / ' + total;
+}
+
+function restartGame() {
+  document.getElementById('celebration').style.display = 'none';
+  startGame([...deck, ...known]);
+}
+
+function showCelebration() {
+  document.getElementById('game-section').style.display = 'none';
+  const cel = document.getElementById('celebration');
+  cel.style.display = 'flex';
+  launchConfetti();
+}
+
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const colors = ['#2e7d32','#e65100','#FFD700','#fff','#4caf50','#ff9800'];
+  const pieces = Array.from({length:150}, () => ({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height - canvas.height,
+    r: Math.random()*7+3,
+    color: colors[Math.floor(Math.random()*colors.length)],
+    speed: Math.random()*3+1,
+    tilt: 0, tiltAngle: 0, tiltSpeed: Math.random()*0.08+0.04
+  }));
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p => {
+      ctx.beginPath();
+      ctx.lineWidth = p.r;
+      ctx.strokeStyle = p.color;
+      ctx.moveTo(p.x + p.tilt + p.r/3, p.y);
+      ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r/4);
+      ctx.stroke();
+      p.tiltAngle += p.tiltSpeed;
+      p.y += p.speed;
+      p.tilt = Math.sin(p.tiltAngle) * 10;
+      if (p.y > canvas.height) { p.y = -10; p.x = Math.random()*canvas.width; }
+    });
+    frame++;
+    if (frame < 380) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+</script>
+</body>
+</html>
