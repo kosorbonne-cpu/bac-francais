@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bac Français — Vocabulaire</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,700;1,400&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #f7f7f5; min-height: 100vh; }
+
+  /* HEADER */
+  header { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 16px 20px; }
+  .header-inner { max-width: 700px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  header h1 { font-size: 1.2rem; color: #111; }
+  .global-progress-wrap { flex: 1; min-width: 180px; max-width: 300px; }
+  .global-progress-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: #888; margin-bottom: 4px; }
+  .bar-bg { height: 8px; background: #e0e0e0; border-radius: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; background: #3a9e00; border-radius: 8px; transition: width 0.5s ease; }
+
+  /* UPLOAD FALLBACK */
+  #upload-bar { background: #fff8f0; border-bottom: 1px solid #ffe0b2; padding: 10px 20px; text-align: center; font-size: 0.82rem; color: #888; display: none; }
+  #upload-bar label { color: #ff8000; font-weight: bold; cursor: pointer; text-decoration: underline; }
+  #file-input { display: none; }
+
+  /* HOME */
+  #home-section { max-width: 700px; margin: 0 auto; padding: 24px 16px; }
+  #home-section h2 { font-size: 1rem; color: #555; margin-bottom: 18px; }
+
+  .oeuvre-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+
+  .oeuvre-card {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 12px;
+    padding: 20px 16px; cursor: pointer; transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .oeuvre-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+  .oeuvre-card .oeuvre-title { font-size: 0.98rem; font-weight: 700; color: #111; margin-bottom: 4px; line-height: 1.4; }
+  .oeuvre-card .oeuvre-author { font-size: 0.78rem; color: #888; margin-bottom: 14px; }
+  .oeuvre-card .card-bar-label { display: flex; justify-content: space-between; font-size: 0.72rem; color: #aaa; margin-bottom: 4px; }
+  .oeuvre-card .card-bar-bg { height: 6px; background: #eee; border-radius: 6px; overflow: hidden; }
+  .oeuvre-card .card-bar-fill { height: 100%; background: #3a9e00; border-radius: 6px; transition: width 0.4s; }
+  .oeuvre-card.done .card-bar-fill { background: #ff8000; }
+  .oeuvre-card .done-badge { margin-top: 10px; font-size: 0.72rem; color: #ff8000; font-weight: 700; }
+
+  /* GAME */
+  #game-section { display: none; max-width: 500px; margin: 0 auto; padding: 20px 16px; }
+
+  .back-btn { background: none; border: none; color: #888; font-size: 0.85rem; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-bottom: 18px; padding: 0; display: flex; align-items: center; gap: 6px; }
+  .back-btn:hover { color: #333; }
+
+  .game-title { font-size: 1.05rem; font-weight: 700; color: #111; margin-bottom: 4px; }
+  .game-author { font-size: 0.8rem; color: #888; margin-bottom: 16px; }
+
+  #progress-wrap { margin-bottom: 18px; }
+  #progress-label { display: flex; justify-content: space-between; font-size: 0.82rem; color: #555; margin-bottom: 6px; }
+  #progress-bar-bg { height: 10px; background: #e0e0e0; border-radius: 10px; overflow: hidden; }
+  #progress-bar { height: 100%; background: #3a9e00; border-radius: 10px; transition: width 0.4s ease; }
+
+  .flip-hint { font-size: 0.78rem; color: #bbb; text-align: center; margin-bottom: 10px; }
+
+  .scene { width: 100%; perspective: 900px; cursor: pointer; margin-bottom: 12px; }
+  .card { width: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.55s ease; border-radius: 14px; }
+  .card.flipped { transform: rotateY(180deg); }
+  .face { width: 100%; backface-visibility: hidden; border-radius: 14px; display: flex; flex-direction: column; padding: 24px 20px; background: #fff; border: 1px solid #ddd; }
+  .back { position: absolute; top:0; left:0; height:100%; transform: rotateY(180deg); justify-content: center; align-items: center; text-align: center; }
+  .front { gap: 14px; }
+  .front .label, .back .label, .back .syn-label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .front .citation { font-style: italic; font-size: 1rem; color: #333; line-height: 1.7; }
+  .front .citation strong { font-style: normal; font-weight: 700; color: #111; }
+  .front .meta { font-size: 0.76rem; color: #aaa; }
+  .back .word { font-size: 1.7rem; font-weight: 700; color: #000; margin-bottom: 10px; }
+  .back .definition { font-size: 0.88rem; color: #444; line-height: 1.6; margin-bottom: 12px; }
+  .back .synonyms { font-size: 0.82rem; color: #666; line-height: 1.6; margin-bottom: 10px; }
+  .back .corpus { font-size: 0.82rem; color: #888; font-style: italic; line-height: 1.6; }
+
+  .btn { display: inline-block; padding: 13px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 1rem; font-family: 'DM Sans', sans-serif; font-weight: 700; width: 100%; margin-bottom: 0; }
+  .btn-green  { background: #3a9e00; color: #fff; }
+  .btn-orange { background: #ff8000; color: #fff; }
+  .btn-grey   { background: #eee; color: #555; }
+  .btn:active { opacity: 0.85; }
+
+  .btn-row { display: flex; gap: 12px; }
+  .btn-row-center { display: flex; justify-content: center; margin-top: 12px; }
+  .btn-small { padding: 10px 22px; font-size: 0.85rem; width: auto; }
+  #card-counter { text-align: center; color: #bbb; font-size: 0.78rem; margin-top: 10px; }
+
+  /* CELEBRATION */
+  #celebration { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 20px; text-align: center; max-width: 500px; margin: 0 auto; }
+  #celebration h2 { font-size: 2rem; color: #222; margin: 20px 0 8px; }
+  #celebration p { font-size: 1rem; color: #555; }
+  #cake-wrap svg { width: 180px; height: 180px; }
+  .flame { transform-origin: center bottom; animation: flicker 0.6s ease-in-out infinite alternate; }
+  .flame:nth-child(2) { animation-delay: 0.2s; }
+  .flame:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes flicker { 0% { transform: scaleY(1) rotate(-2deg); } 100% { transform: scaleY(1.2) rotate(2deg); } }
+
+  #confetti-canvas { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:999; }
+
+  /* Loading */
+  #loading { text-align: center; padding: 60px 20px; color: #aaa; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+
+<header>
+  <div class="header-inner">
+    <h1>Bac Français</h1>
+    <div class="global-progress-wrap">
+      <div class="global-progress-label">
+        <span>Progression générale</span>
+        <span id="global-label">0 / 0</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="global-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+</header>
+
+<div id="upload-bar">
+  Fichier non trouvé —
+  <input type="file" id="file-input" accept=".xlsx,.xls,.csv"/>
+  <label for="file-input">importe ton fichier manuellement</label>
+</div>
+
+<!-- Home -->
+<div id="home-section">
+  <div id="loading">Chargement des œuvres…</div>
+  <div class="oeuvre-grid" id="oeuvre-grid"></div>
+  <div style="text-align:center; margin-top:28px;">
+    <button class="btn btn-grey btn-small" onclick="resetAll()">Réinitialiser toute la progression</button>
+  </div>
+</div>
+
+<!-- Game -->
+<div id="game-section">
+  <button class="back-btn" onclick="goHome()">← Retour aux œuvres</button>
+  <div class="game-title" id="game-title"></div>
+  <div class="game-author" id="game-author"></div>
+
+  <div id="progress-wrap">
+    <div id="progress-label">
+      <span id="known-count">0 sus</span>
+      <span id="left-count">0 restants</span>
+    </div>
+    <div id="progress-bar-bg"><div id="progress-bar" style="width:0%"></div></div>
+  </div>
+
+  <div class="flip-hint">Clique pour retourner la carte</div>
+
+  <div class="scene" onclick="flipCard()">
+    <div class="card" id="card">
+      <div class="face front">
+        <div class="label">Citation</div>
+        <div class="citation" id="f-citation"></div>
+        <div class="meta" id="f-meta"></div>
+      </div>
+      <div class="face back">
+        <div class="label">Mot &amp; Définition</div>
+        <div class="word" id="b-word"></div>
+        <div class="definition" id="b-def"></div>
+        <div class="syn-label">Synonymes</div>
+        <div class="synonyms" id="b-syn"></div>
+        <div class="syn-label" style="margin-top:8px;">Exemple d'usage</div>
+        <div class="corpus" id="b-corpus"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-orange" onclick="markCard(false)">À revoir</button>
+    <button class="btn btn-green"  onclick="markCard(true)">Je sais !</button>
+  </div>
+  <div class="btn-row-center" style="gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-grey btn-small" onclick="restartOeuvre()">Recommencer</button>
+    <button class="btn btn-grey btn-small" onclick="resetOeuvre()">Réinitialiser</button>
+  </div>
+  <div id="card-counter"></div>
+</div>
+
+<!-- Celebration -->
+<div id="celebration">
+  <div id="cake-wrap">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="176" rx="82" ry="11" fill="#c8b88a"/>
+      <rect x="28" y="128" width="144" height="50" rx="10" fill="#5c3317"/>
+      <path d="M38,128 Q50,112 62,128 Q74,112 86,128 Q98,112 110,128 Q122,112 134,128 Q146,112 158,128 Q164,118 170,128" fill="none" stroke="#3b1f08" stroke-width="6" stroke-linecap="round"/>
+      <rect x="28" y="120" width="144" height="12" rx="6" fill="#3a9e00"/>
+      <rect x="52" y="76" width="96" height="48" rx="9" fill="#6d3a1f"/>
+      <path d="M60,76 Q70,62 80,76 Q90,62 100,76 Q110,62 120,76 Q130,62 138,76" fill="none" stroke="#3b1f08" stroke-width="5" stroke-linecap="round"/>
+      <rect x="52" y="68" width="96" height="12" rx="6" fill="#ff8000"/>
+      <rect x="78" y="32" width="9" height="26" rx="4" fill="#ff8000"/>
+      <rect x="96" y="26" width="9" height="32" rx="4" fill="#3a9e00"/>
+      <rect x="114" y="32" width="9" height="26" rx="4" fill="#ff8000"/>
+      <ellipse class="flame" cx="82"  cy="29" rx="4" ry="7" fill="#FFD700"/>
+      <ellipse class="flame" cx="100" cy="23" rx="4" ry="7" fill="#FFD700"/>
+      <ellipse class="flame" cx="118" cy="29" rx="4" ry="7" fill="#FFD700"/>
+      <circle cx="50"  cy="152" r="5" fill="#ff8000"/>
+      <circle cx="70"  cy="146" r="5" fill="#3a9e00"/>
+      <circle cx="90"  cy="152" r="5" fill="#ff8000"/>
+      <circle cx="110" cy="146" r="5" fill="#3a9e00"/>
+      <circle cx="130" cy="152" r="5" fill="#ff8000"/>
+      <circle cx="150" cy="146" r="5" fill="#3a9e00"/>
+    </svg>
+  </div>
+  <h2>Bravo Katia !</h2>
+  <p id="celeb-text">Tu as maîtrisé tous les mots !</p>
+  <div class="btn-row-center" style="margin-top:24px; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-grey btn-small" onclick="goHome()">Retour aux œuvres</button>
+    <button class="btn btn-grey btn-small" onclick="restartOeuvre()">Recommencer</button>
+    <button class="btn btn-grey btn-small" onclick="resetOeuvre()">Réinitialiser</button>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let allCards = [];
+// progress[work] = Set of word indices known
+let progress = {};
+let currentWork = null;
+let deck = [], known = [], total = 0, flipped = false;
+
+// ── Load CSV from same folder ──────────────────────────────────────────────
+async function loadCSV() {
+  try {
+    const res = await fetch('words.csv');
+    if (!res.ok) throw new Error('not found');
+    const text = await res.text();
+    parseCSV(text);
+  } catch {
+    // Try words.xlsx
+    try {
+      const res2 = await fetch('words.xlsx');
+      if (!res2.ok) throw new Error('not found');
+      const buf = await res2.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      allCards = rowsToCards(XLSX.utils.sheet_to_json(ws, {defval:''}));
+      init();
+    } catch {
+      document.getElementById('loading').textContent = '';
+      document.getElementById('upload-bar').style.display = 'block';
+      // show demo data
+      allCards = DEMO;
+      init();
+    }
+  }
+}
+
+function parseCSV(text) {
+  // detect separator: tab or comma
+  const firstLine = text.split('\n')[0];
+  const sep = firstLine.includes('\t') ? '\t' : ',';
+  const wb = XLSX.read(text, {type:'string', FS: sep});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  allCards = rowsToCards(XLSX.utils.sheet_to_json(ws, {defval:''}));
+  init();
+}
+
+function rowsToCards(rows) {
+  return rows.map((r,i) => {
+    const raw = r['Auteur / Œuvre'] || r['Auteur / Oeuvre'] || r['Author'] || r['author'] || '';
+    // Split on " — " or ", " to get author and work
+    let author = raw, work = 'Sans titre';
+    const sepEM = raw.indexOf(' — ');
+    const sepDash = raw.indexOf(' - ');
+    const sepComma = raw.indexOf(', ');
+    if (sepEM > -1) { author = raw.slice(0, sepEM).trim(); work = raw.slice(sepEM+3).replace(/\s*\(\d+\)/, '').trim(); }
+    else if (sepDash > -1) { author = raw.slice(0, sepDash).trim(); work = raw.slice(sepDash+3).replace(/\s*\(\d+\)/, '').trim(); }
+    else if (sepComma > -1) { author = raw.slice(0, sepComma).trim(); work = raw.slice(sepComma+2).replace(/\s*\(\d+\)/, '').trim(); }
+    return {
+      id:         i,
+      word:       r['Mot / expression']            || r['Word']       || '',
+      citation:   r['Phrase du poème (non réduite)']|| r['Phrase du roman (non réduite)'] || r['Citation'] || '',
+      definition: r['Définition précise']           || r['Definition'] || '',
+      synonyms:   r['Synonymes littéraires']        || r['Synonyms']   || '',
+      corpus:     r['Corpus']                       || '',
+      author, work,
+    };
+  }).filter(c => c.word);
+}
+
+// Manual upload fallback
+document.getElementById('file-input').onchange = e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  if (file.name.endsWith('.csv')) {
+    reader.onload = ev => { parseCSV(ev.target.result); document.getElementById('upload-bar').style.display='none'; };
+    reader.readAsText(file);
+  } else {
+    reader.onload = ev => {
+      const wb = XLSX.read(ev.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      allCards = rowsToCards(XLSX.utils.sheet_to_json(ws, {defval:''}));
+      document.getElementById('upload-bar').style.display='none';
+      init();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+};
+
+// ── Demo data ──────────────────────────────────────────────────────────────
+const DEMO = [
+  {id:0, word:"Onde", citation:"« Sur l'onde calme et noire où dorment les étoiles. »", definition:"Surface de l'eau en mouvement.", synonyms:"vague, flot, remous", author:"Arthur Rimbaud", work:"Ophélie", corpus:"L'onde reflétait les lumières."},
+  {id:1, word:"Fantôme", citation:"« Voici plus de mille ans que la triste Ophélie passe, fantôme blanc. »", definition:"Apparition spectrale, figure entre présence et absence.", synonyms:"spectre, apparition, ombre", author:"Arthur Rimbaud", work:"Ophélie", corpus:"Il avançait comme un fantôme."},
+  {id:2, word:"Folie", citation:"« Sa douce folie murmure sa romance à la brise du soir. »", definition:"Perte de raison, dérèglement mental teinté de douceur.", synonyms:"délire, égarement, dérèglement", author:"Arthur Rimbaud", work:"Ophélie", corpus:"Sa folie douce le rendait imprévisible."},
+  {id:3, word:"Spleen", citation:"« J'ai plus de souvenirs que si j'avais mille ans. »", definition:"Mélancolie profonde, ennui existentiel.", synonyms:"mélancolie, lassitude, tristesse", author:"Charles Baudelaire", work:"Les Fleurs du Mal", corpus:"Le spleen de janvier pesait sur la ville."},
+  {id:4, word:"Lésine", citation:"« La sottise, l'erreur, le péché, la lésine. »", definition:"Attitude d'avarice sordide.", synonyms:"avarice, pingrerie, mesquinerie", author:"Charles Baudelaire", work:"Les Fleurs du Mal", corpus:"Sa lésine agaçait tout le monde."},
+  {id:5, word:"Idéal", citation:"« Je suis belle, ô mortels ! comme un rêve de pierre. »", definition:"Aspiration vers une perfection inaccessible.", synonyms:"perfection, absolu, beauté", author:"Charles Baudelaire", work:"Les Fleurs du Mal", corpus:"Il poursuivait un idéal impossible."},
+];
+
+// ── Init ───────────────────────────────────────────────────────────────────
+function init() {
+  // Load saved progress
+  try { progress = JSON.parse(localStorage.getItem('bac_progress') || '{}'); } catch { progress = {}; }
+  // Ensure sets
+  const works = [...new Set(allCards.map(c => c.work))];
+  works.forEach(w => { if (!progress[w]) progress[w] = []; });
+  document.getElementById('loading').style.display = 'none';
+  renderHome();
+}
+
+function saveProgress() {
+  try { localStorage.setItem('bac_progress', JSON.stringify(progress)); } catch {}
+}
+
+// ── Home ───────────────────────────────────────────────────────────────────
+function renderHome() {
+  document.getElementById('home-section').style.display = 'block';
+  document.getElementById('game-section').style.display = 'none';
+  document.getElementById('celebration').style.display = 'none';
+
+  const works = [...new Set(allCards.map(c => c.work))];
+  const grid = document.getElementById('oeuvre-grid');
+  grid.innerHTML = '';
+
+  let totalKnown = 0, totalAll = allCards.length;
+
+  works.forEach(w => {
+    const cards = allCards.filter(c => c.work === w);
+    const knownIds = progress[w] || [];
+    const k = knownIds.length, t = cards.length;
+    totalKnown += k;
+    const pct = t ? Math.round(k/t*100) : 0;
+    const done = k === t && t > 0;
+    const started = k > 0 && !done;
+
+    const author = cards[0]?.author || '';
+    const card = document.createElement('div');
+    card.className = 'oeuvre-card' + (done ? ' done' : '');
+    card.innerHTML = `
+      <div class="oeuvre-title">${w}</div>
+      <div class="oeuvre-author">${author}</div>
+      <div class="card-bar-label"><span>${k} / ${t} mots</span><span>${pct}%</span></div>
+      <div class="card-bar-bg"><div class="card-bar-fill" style="width:${pct}%"></div></div>
+      ${done ? '<div class="done-badge">Terminé !</div>' : ''}
+      ${started ? '<div class="done-badge" style="color:#ff8000">En cours — continuer →</div>' : ''}
+    `;
+    card.onclick = () => startOeuvre(w);
+    grid.appendChild(card);
+  });
+
+  // Global progress
+  const gPct = totalAll ? Math.round(totalKnown/totalAll*100) : 0;
+  document.getElementById('global-bar').style.width = gPct + '%';
+  document.getElementById('global-label').textContent = totalKnown + ' / ' + totalAll;
+}
+
+// ── Game ───────────────────────────────────────────────────────────────────
+function startOeuvre(work) {
+  currentWork = work;
+  const cards = allCards.filter(c => c.work === work);
+  const knownIds = new Set(progress[work] || []);
+  // Cards not yet known come first, known ones at the end (so user can review)
+  const remaining = cards.filter(c => !knownIds.has(c.id));
+  const doneCards  = cards.filter(c =>  knownIds.has(c.id));
+  deck = shuffle([...remaining, ...doneCards]);
+  known = [];
+  total = deck.length;
+
+  document.getElementById('home-section').style.display = 'none';
+  document.getElementById('celebration').style.display = 'none';
+  document.getElementById('game-section').style.display = 'block';
+  document.getElementById('game-title').textContent = work;
+  document.getElementById('game-author').textContent = cards[0]?.author || '';
+  showCard();
+}
+
+function goHome() {
+  document.getElementById('game-section').style.display = 'none';
+  document.getElementById('celebration').style.display = 'none';
+  renderHome();
+}
+
+function resetOeuvre() {
+  if (!currentWork) return;
+  if (!confirm('Réinitialiser la progression pour « ' + currentWork + ' » ?')) return;
+  progress[currentWork] = [];
+  saveProgress();
+  startOeuvre(currentWork);
+}
+
+function resetAll() {
+  if (!confirm('Réinitialiser toute la progression ?')) return;
+  progress = {};
+  saveProgress();
+  renderHome();
+}
+
+function showCard() {
+  if (!deck.length) { showCelebration(); return; }
+  flipped = false;
+  document.getElementById('card').classList.remove('flipped');
+  const c = deck[0];
+  const re = new RegExp(`(${c.word})`, 'gi');
+  document.getElementById('f-citation').innerHTML = (c.citation||'—').replace(re,'<strong>$1</strong>');
+  document.getElementById('f-meta').textContent = [c.work, c.author].filter(Boolean).join(' · ');
+  document.getElementById('b-word').textContent = c.word;
+  document.getElementById('b-def').textContent = c.definition;
+  document.getElementById('b-syn').textContent = c.synonyms || '—';
+  document.getElementById('b-corpus').textContent = c.corpus || '';
+  updateProgress();
+  setTimeout(syncHeight, 50);
+}
+
+function syncHeight() {
+  const front = document.querySelector('.face.front');
+  const scene = document.querySelector('.scene');
+  const card  = document.getElementById('card');
+  const h = Math.max(front.scrollHeight, 240);
+  scene.style.height = h+'px'; card.style.height = h+'px';
+}
+
+function flipCard() {
+  flipped = !flipped;
+  document.getElementById('card').classList.toggle('flipped', flipped);
+}
+
+function markCard(know) {
+  if (!flipped) { flipCard(); return; }
+  const c = deck.shift();
+  if (know) {
+    known.push(c);
+    if (!progress[currentWork]) progress[currentWork] = [];
+    if (!progress[currentWork].includes(c.id)) progress[currentWork].push(c.id);
+    saveProgress();
+  } else {
+    deck.push(c);
+  }
+  showCard();
+}
+
+function updateProgress() {
+  const left = deck.length, k = known.length;
+  document.getElementById('progress-bar').style.width = (total ? k/total*100 : 0)+'%';
+  document.getElementById('known-count').textContent = k+' sus';
+  document.getElementById('left-count').textContent = left+' restant'+(left>1?'s':'');
+  document.getElementById('card-counter').textContent = 'Carte '+(k+1)+' / '+total;
+}
+
+function showCelebration() {
+  document.getElementById('game-section').style.display = 'none';
+  const cel = document.getElementById('celebration');
+  cel.style.display = 'flex';
+  const t = allCards.filter(c=>c.work===currentWork).length;
+  document.getElementById('celeb-text').textContent = `Tu as maîtrisé les ${t} mots de cette œuvre !`;
+  launchConfetti();
+}
+
+function shuffle(a) { for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a; }
+
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const colors = ['#3a9e00','#ff8000','#FFD700','#fff','#a5d6a7','#ffcc80'];
+  const pieces = Array.from({length:140},()=>({
+    x:Math.random()*canvas.width, y:Math.random()*canvas.height-canvas.height,
+    r:Math.random()*7+3, color:colors[Math.floor(Math.random()*colors.length)],
+    speed:Math.random()*3+1, tilt:0, tiltAngle:0, tiltSpeed:Math.random()*0.08+0.04
+  }));
+  let frame=0;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p=>{
+      ctx.beginPath(); ctx.lineWidth=p.r; ctx.strokeStyle=p.color;
+      ctx.moveTo(p.x+p.tilt+p.r/3,p.y); ctx.lineTo(p.x+p.tilt,p.y+p.tilt+p.r/4); ctx.stroke();
+      p.tiltAngle+=p.tiltSpeed; p.y+=p.speed; p.tilt=Math.sin(p.tiltAngle)*10;
+      if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width;}
+    });
+    frame++;
+    if(frame<380) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+
+// Start
+loadCSV();
+</script>
+</body>
+</html>
